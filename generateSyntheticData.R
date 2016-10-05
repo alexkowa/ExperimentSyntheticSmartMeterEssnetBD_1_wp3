@@ -2,8 +2,6 @@
 # 
 # Author: kowa$
 ###############################################################################
-
-
 library(simPop);library(VIM)
 # Eusilc Austria sample data
 data(eusilcS)
@@ -53,5 +51,20 @@ cust[,IS_HOME_DURING_DAYTIME:=factor(IS_HOME_DURING_DAYTIME)]
 h[,IS_HOME_DURING_DAYTIME:=factor(IS_HOME_DURING_DAYTIME)]
 #Impute missing income groups
 cust[,HHOLD_INCOME_GROUP_CD:=kNN(cust,imp_var = FALSE)$HHOLD_INCOME_GROUP_CD]
-h[,:=NAHHOLD_INCOME_GROUP_CD]
+#Initialize empty customer key variable
+h[,CUSTOMER_KEY:=NA]
+hx <- rbind(h,cust,fill=TRUE)
+hy <- hotdeck(hx,variable="CUSTOMER_KEY",ord_var=matchVar,imp_var = FALSE)
+hy <- hy[!is.na(db030)]
+save(hy,file="hhWithCustomerKey.RData",compress=TRUE)
+rm(h,hx,p,simPop);gc()
 smr <- fread("/hdfs/datasets/smartmeters/metering_data/metering_data.csv")
+smr <- smr[CUSTOMER_ID%in%cust[,CUSTOMER_KEY],]
+setnames(smr,"CUSTOMER_ID","CUSTOMER_KEY")
+setkey(smr,CUSTOMER_KEY)
+#Remove unnecessary vars
+smr[,c("EVENT_KEY","CALENDAR_KEY","CONTROLLED_LOAD_KWH","GROSS_GENERATION_KWH",
+       "NET_GENERATION_KWH","OTHER_KWH"):=NULL]
+#only keep 1 year (2013)
+smr smr[year(READING_DATETIME)==2013]
+gc()
