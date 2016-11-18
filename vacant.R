@@ -46,6 +46,21 @@ vacant1 <- function(kwh,ret="x"){
       return(cor(ts(kwh,start = 1,frequency=2)-aa$residuals,ts(kwh,start = 1,frequency=2)))
   }
 }
+
+vacant1 <- function(kwh,ret="x"){
+  x <- try(aa <- auto.arima(ts(kwh,start = 1,frequency=2)))
+  
+  if(class(x)=="try-error")
+    return(as.numeric(NA))
+  else{
+    if(ret=="pred")
+      return(ts(kwh,start = 1,frequency=2)-aa$residuals)
+    else
+      return(cor(ts(kwh,start = 1,frequency=2)-aa$residuals,ts(kwh,start = 1,frequency=2)))
+  }
+}
+
+
 smr1[,nobs:=.N,by=.(CUSTOMER_KEY,day)]
 smr1 <- smr1[nobs==48]
 smr1[,out:=vacant(GENERAL_SUPPLY_KWH,.5),by=.(CUSTOMER_KEY,day)]
@@ -54,6 +69,9 @@ smr1[,outts:=vacant1(GENERAL_SUPPLY_KWH,ret="pred"),by=.(CUSTOMER_KEY,day)]
 v1 <- smr1[,.(out=vacant(GENERAL_SUPPLY_KWH,.5,ret="out")),by=.(CUSTOMER_KEY,day)]
 v2 <- smr1[,.(outts=vacant1(GENERAL_SUPPLY_KWH)),by=.(CUSTOMER_KEY,day)]
 v3 <- smr1[,.(outvol=sd(diff(scale(GENERAL_SUPPLY_KWH)))),by=.(CUSTOMER_KEY,day)]
+v4 <- smr1[,.(outvar=var(GENERAL_SUPPLY_KWH)),by=.(CUSTOMER_KEY,day)]
+smr1[,daytime:=!hour(date)%in%c(0:7,20:23)]
+v5 <- smr1[,.(outm=mean(GENERAL_SUPPLY_KWH[daytime])/mean(GENERAL_SUPPLY_KWH[!daytime])),by=.(CUSTOMER_KEY,day)]
 par(ask=TRUE)
 plotf <- function(x,y,z,m){
   plot(x~z,type="l",main=paste0("Correlation:", m),xlab="hour",ylab="kwh")
@@ -86,7 +104,21 @@ ind <- tail(1:nrow(v3),20)
 for(i in 1:10){
   smr1[CUSTOMER_KEY==v3[ind[i],CUSTOMER_KEY]&day==v3[ind[i],day],plot(GENERAL_SUPPLY_KWH~date,main=round(v3[ind[4],outvol],2),type="l")]  
 }
-
+quantile(v4$outvar,c(.05,.95),na.rm=TRUE)
+v4 <- v4[!is.na(outvar)]
+setkey(v4,outvar)
+ind <- head(1:nrow(v4),20)
+for(i in 1:10){
+  smr1[CUSTOMER_KEY==v4[ind[i],CUSTOMER_KEY]&day==v4[ind[i],day],plot(GENERAL_SUPPLY_KWH~date,main=round(v4[ind[4],outvar],2),type="l")]  
+}
+quantile(v5$outm,c(.05,.95),na.rm=TRUE)
+v5[,outma:=abs(outm-1)]
+v5 <- v5[!is.na(outma)]
+setkey(v5,outma)
+ind <- tail(1:nrow(v5),20)
+for(i in 1:10){
+  smr1[CUSTOMER_KEY==v5[ind[i],CUSTOMER_KEY]&day==v5[ind[i],day],plot(GENERAL_SUPPLY_KWH~date,main=round(v5[ind[4],outma],2),type="l")]  
+}
 plot(reg[,1]~zz,type="l",xlab="hour",ylab="Regressor",main="High frequency")
 plot(reg[,2]~zz,type="l",xlab="hour",ylab="Regressor",main="Medium frequency")
 plot(reg[,3]~zz,type="l",xlab="hour",ylab="Regressor",main="Low frequency")
