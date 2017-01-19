@@ -136,11 +136,11 @@ estimate_KWH <- function(smr,time.window="WEEK",window.part=NULL){
   # look at number of data per time.window and CUSTOMER_KEY
   # missings can occur in data
   # discard each time.window for each CUSTOMER_KEY where only little data ist present
-
+  
   if(time.window%in%c("QUARTER","MONTH","WEEK")){
     
     setkeyv(smr.internal,c("CUSTOMER_KEY","DAY"))
-
+    
     count.Window <- unique(subset(smr.internal,select=c("CUSTOMER_KEY","YEAR","DAY",time.window)))
     count.Window <- count.Window[,.N,by=c("CUSTOMER_KEY","YEAR",time.window)]
     
@@ -160,8 +160,8 @@ estimate_KWH <- function(smr,time.window="WEEK",window.part=NULL){
     smr.internal <- smr.internal[keep[,keynames,with=FALSE]]
   }
   ##################
-    
-
+  
+  
   ##################
   # aggregate KWH to time.window and window.part
   if(time.window%in%c("QUARTER","MONTH","WEEK")){
@@ -225,17 +225,6 @@ save(out,file="KWH_estimates.RData")
 
 ####################################################################################################
 # plot results
-# look at (for example) income-groups and
-smr[,KWH_mean:=mean.default(KWH_sum),by=list(CUSTOMER_KEY,QUARTER,WDAYS,HOUR)]
-setkeyv(smr,c("CUSTOMER_KEY","QUARTER","WDAYS","HOUR"))
-smr <- unique(subset(smr,select=c("CUSTOMER_KEY","QUARTER","WDAYS","MONTH","HOUR","KWH_mean")))
-
-
-
-smr[,KWH_mean:=mean(KWH_mean),by=list(CUSTOMER_KEY,QUARTER,DAY_TYPE,HOUR_TYPE)]
-smr <- unique(subset(smr,select=c("CUSTOMER_KEY","QUARTER","DAY_TYPE","HOUR_TYPE","KWH_mean")))
-
-smr <- dcast(smr,CUSTOMER_KEY~QUARTER+DAY_TYPE+HOUR_TYPE,value.var="KWH_mean")
 
 # read shape file
 area <- readOGR(dsn="/mnt/meth/Gussenbauer/ESSNet BigData/data",layer="STATISTIK_AUSTRIA_GEM_20160101")
