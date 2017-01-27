@@ -71,7 +71,7 @@ hx[,c("NUM_OCCUPANTS","NUM_CHILDREN_0_10","NUM_CHILDREN_11_17","NUM_OCCUPANTS_70
                                                                                              factor(NUM_CHILDREN_11_17),
                                                                                              factor(NUM_OCCUPANTS_70PLUS))]
 primitive.impute <- function(x){
-  
+  # function for primitive imputation
   x.na <- is.na(x)
   
   if(all(!x.na)){
@@ -90,7 +90,6 @@ primitive.impute <- function(x){
   }
   
   return(x)
-  
 }
 
 # apply primitive.impute until no NAs are present anymore
