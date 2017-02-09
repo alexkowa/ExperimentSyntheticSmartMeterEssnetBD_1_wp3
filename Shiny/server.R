@@ -5,8 +5,8 @@ library(data.table)
 library(ggplot2)
 library(shiny)
 # load data
-load("../hhWithCustomerKey.RData")
-load("../KWH_estimates.RData")
+load("data/hhWithCustomerKey.RData")
+load("data/KWH_estimates.RData")
 
 # help-function to estimate mean of KWH per time.vars and hy.split
 selectKWH <- function(hy,KWH_estimates,time.vars="HOUR",hy.split="HHOLD_INCOME_GROUP_CD"){
