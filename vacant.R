@@ -1,6 +1,6 @@
 library(robustbase)
 library(data.table)
-library(forecast)
+#library(forecast)
 load("hhWithCustomerKey.RData") 
 
 sampKey <- hy[!duplicated(CUSTOMER_KEY)][1:10,CUSTOMER_KEY]
@@ -131,7 +131,73 @@ plot(reg[,3]~zz,type="l",xlab="hour",ylab="Regressor",main="Low frequency")
 # Use variance to determine if household is vacant
 
 smr[,VAR.DAY:=var(GENERAL_SUPPLY_KWH),by=list(CUSTOMER_KEY,DAY)]
-smr
+
+setkeyv(smr,c("CUSTOMER_KEY"))
+
+# look at distribution of variances per either customer or day
+
+smr.vac <- unique(subset(smr,select=c("CUSTOMER_KEY","DAY","VAR.DAY")))
+
+customers <- unique(smr.vac$CUSTOMER_KEY)
+h <- 10
+for(i in 1:length(customers)){
+  
+  smr.plot <- smr.vac[CUSTOMER_KEY%in%customers[((i-1)*h+1):(i*h)]]
+  
+  p1 <- ggplot(smr.plot,aes(VAR.DAY))+
+    geom_histogram(binwidth=0.01)+
+    facet_grid(.~CUSTOMER_KEY,scales="free")
+  plot(p1)
+  readline(prompt="Press [enter] to continue")
+}
+
+
+# set household and day to be vacant if var exceeds threshold
+# set threshold such that distribution over time spans of vaccant households seems meaningfull ~ majority week(s)
+
+th <- 0.05
+
+smr.vac[,VACCANT:=as.numeric(VAR.DAY<th)]
+
+smr.vac.N <- smr.vac[,.N,by=list(CUSTOMER_KEY,VACCANT)]
+
+p1 <- ggplot(smr.vac.N,aes(N))+
+  geom_histogram()
+plot(p1)
+
+x <- smr.vac[CUSTOMER_KEY%in%unique(CUSTOMER_KEY)[1]]$VACCANT
+
+consec.vaccant <- function(x){
+  
+  n <- length(x)
+  x.diff <- diff(x)
+  
+  x.start <- which(x.diff==1)+1
+  x.end <- which(x.diff==-1)+1
+  
+  if(x.start[1]>x.end[1]) x.start <- c(1,x.start)
+  if(tail(x.end,1)<tail(x.start,1)) x.end <- c(x.end,n+1)
+  
+  out <- x.end-x.start
+}
+
+smr.vac <- smr.vac[,consec.vaccant(VACCANT),by="CUSTOMER_KEY"]
+
+
+##############################################
+# outlier detection on daily KWH
+
+smr[,KWH:=sum(GENERAL_SUPPLY_KWH),by=list(CUSTOMER_KEY,DAY)]
+
+setkeyv(smr,c("CUSTOMER_KEY","DAY"))
+
+smr.sum <- unique(subset(smr,select=c("DAY","CUSTOMER_KEY","KWH")))
+
+boxplot()
+
+
+
+
 
 
 
