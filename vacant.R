@@ -10,14 +10,18 @@ library(geoR)
 #library(forecast)
 load("hhWithCustomerKey.RData") 
 
-sampKey <- hy[!duplicated(CUSTOMER_KEY)][1:10,CUSTOMER_KEY]
+sampKey <- hy[!duplicated(CUSTOMER_KEY)][1:100,CUSTOMER_KEY]
 rm(hy)
 
 load("/mnt/meth/BIGDATA/Smartmeter/smr.RData")
+
 smr[,YEAR:=substr(READING_DATETIME,1,4)]
 smr <- smr[YEAR==2013,.(CUSTOMER_KEY,READING_DATETIME,GENERAL_SUPPLY_KWH)]
 smr[,DAY:=substr(READING_DATETIME,6,10)]
 
+load("M:/BIGDATA/SmartMeter/SmartMeter_transformed_2013.RData")
+smr[,GENERAL_SUPPLY_KWH:=KWH_sum]
+smr[,KWH_sum:=NULL]
 #######################################################################
 # EXAMPLES
 smr1 <- smr[CUSTOMER_KEY%in%sampKey]
@@ -26,14 +30,15 @@ smr1[CUSTOMER_KEY==11162831,plot(GENERAL_SUPPLY_KWH~as.Date(DAY),type="l")]
 smr1[CUSTOMER_KEY==11162831&as.Date(DAY)=="2013-01-01",summary(GENERAL_SUPPLY_KWH)]
 smr1[CUSTOMER_KEY==11162831,summary(DAY)]
 x <- cbind(
-  rep(seq(-pi,0,l=3),16),
+  rep(seq(-pi,0,l=3),8),
   #rep(seq(-pi,0,l=4),12),
   #rep(seq(-pi,0,l=6),8),
-  rep(seq(-pi,0,l=8),6),
+  rep(seq(-pi,0,l=6),4),
   #rep(seq(-pi,0,l=12),4),
-  rep(seq(-pi,0,l=16),3)
+  rep(seq(-pi,0,l=12),2)
 )
 reg <- abs(sin(x))
+
 vacant <- function(kwh,thr,ret="pred"){
   regx <- reg[1:length(kwh),]
   x <- try(m <- lm(kwh~regx-1),silent = TRUE)
@@ -72,7 +77,7 @@ vacant1 <- function(kwh,ret="x"){
 
 
 smr1[,nobs:=.N,by=.(CUSTOMER_KEY,DAY)]
-smr1 <- smr1[nobs==48]
+smr1 <- smr1[nobs==24]
 smr1[,out:=vacant(GENERAL_SUPPLY_KWH,.5),by=.(CUSTOMER_KEY,DAY)]
 smr1[,outvol:=sd(diff(log(GENERAL_SUPPLY_KWH))),by=.(CUSTOMER_KEY,DAY)]
 smr1[,outts:=vacant1(GENERAL_SUPPLY_KWH,ret="pred"),by=.(CUSTOMER_KEY,DAY)]
@@ -262,8 +267,8 @@ cust[,NUM_OCCUPANTS_F:=factor(occ[NUM_OCCUPANTS+1],labels=c("low","mid","high"))
 #Impute missing income groups
 cust[,HHOLD_INCOME_GROUP_CD:=kNN(cust,imp_var = FALSE)$HHOLD_INCOME_GROUP_CD]
 save(cust,file="customers_test.RData",compress=TRUE)
+load("customers_test.RData")
 setkey(cust,CUSTOMER_KEY)
-
 
 smr.mon <- dcast(smr.sum,MON+CUSTOMER_KEY~DAY,value.var="KWH",fill=NA)
 smr.mon[,OUT.GROUP:=vaccant_out(.SD[,-1,with=FALSE]),by="MON"]
