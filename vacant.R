@@ -7,7 +7,7 @@ library(fasttime)
 library(ggplot2)
 library(MASS)
 library(geoR)
-#library(forecast)
+library(forecast)
 load("hhWithCustomerKey.RData") 
 
 sampKey <- hy[!duplicated(CUSTOMER_KEY)][1:100,CUSTOMER_KEY]
@@ -25,6 +25,7 @@ smr[,READING_DATETIME:=NULL]
 save(smr,file="/mnt/meth/BIGDATA/SmartMeter/SmartMeter_transformed_2013_02.RData",compress=TRUE)
 
 load("M:/BIGDATA/SmartMeter/SmartMeter_transformed_2013.RData")
+load("M:/BIGDATA/SmartMeter/SmartMeter_transformed_2013_02.RData")
 smr[,GENERAL_SUPPLY_KWH:=KWH_sum]
 smr[,KWH_sum:=NULL]
 #######################################################################
@@ -109,7 +110,6 @@ ind <- sample(1:nrow(v2),10)
 for(i in 1:10){
   smr1[CUSTOMER_KEY==v2[ind[i],CUSTOMER_KEY]&DAY==v2[ind[i],DAY],plotf(GENERAL_SUPPLY_KWH,outts,HOUR,round(v2[ind[i],outts],2))]  
 }
-
 summary(v1$out)
 setkey(v1,out)
 ind <- head(1:nrow(v1),10)
@@ -142,6 +142,56 @@ for(i in 1:10){
 plot(reg[,1]~zz,type="l",xlab="hour",ylab="Regressor",main="High frequency")
 plot(reg[,2]~zz,type="l",xlab="hour",ylab="Regressor",main="Medium frequency")
 plot(reg[,3]~zz,type="l",xlab="hour",ylab="Regressor",main="Low frequency")
+
+smr1[,HOUR:=paste(HOUR,c(":00",":30"),sep="")]
+smr1[,v1:=abs(vacant1(GENERAL_SUPPLY_KWH),by=.(CUSTOMER_KEY,DAY))]
+smr1[,v2:=sd(diff(scale(GENERAL_SUPPLY_KWH))),by=.(CUSTOMER_KEY,DAY)]
+smr1[,v3:=var(GENERAL_SUPPLY_KWH),by=.(CUSTOMER_KEY,DAY)]
+smr1[,daytime:=!as.numeric(substr(HOUR,1,2))%in%c(0:7,20:23)]
+smr1[,v4:=mean(GENERAL_SUPPLY_KWH[daytime])/mean(GENERAL_SUPPLY_KWH[!daytime]),by=.(CUSTOMER_KEY,DAY)]
+
+
+plot.methods <- function(smr1,vx,n=5,d=4){
+  
+  q <- smr1[,quantile(unique(get(vx)),c(0.1,0.9),na.rm=TRUE)]
+  
+  select.top <- unique(smr1[get(vx)>q[2],c("CUSTOMER_KEY","DAY",vx),with=FALSE],by=vx)
+  top <- sample(1:nrow(select.top),n)
+  
+  select.bottom <- unique(smr1[get(vx)<q[1],c("CUSTOMER_KEY","DAY",vx),with=FALSE],by=vx)
+  bottom <- sample(1:nrow(select.bottom),n)
+  
+  setkeyv(smr1,c("CUSTOMER_KEY","DAY"))
+  
+  dat.plot <- smr1[rbind(select.top[top],select.bottom[bottom])]
+
+  dat.plot[,c(vx):=round(get(vx),digits=d)]
+  
+  hour_breaks <- smr1[,unique(HOUR)]
+  hour_labels[seq(2,48,by=2)] <- ""
+  
+  setnames(dat.plot,vx,"x")
+  p1 <- ggplot(dat.plot,aes(HOUR,GENERAL_SUPPLY_KWH))+
+    ylab("KWH USAGE")+
+    geom_line(aes(group=x,colour=factor(CUSTOMER_KEY)))+
+    scale_x_discrete(breaks=hour_breaks,labels=hour_labels)+
+    theme(legend.position="none")+
+    facet_grid(x~.,scales="free")
+  
+  plot(p1)
+}
+
+set.seed(123)
+#ts
+plot.methods(smr1,vx=c("v1"),d=4)
+#variability
+plot.methods(smr1,vx=c("v2"),d=4)
+#variance
+plot.methods(smr1,vx=c("v3"),d=6)
+# day-night time
+plot.methods(smr1,vx=c("v4"),d=4)
+
+
 
 #######################################################################
 #######################################################################
