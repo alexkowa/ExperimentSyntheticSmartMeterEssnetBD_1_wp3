@@ -15,9 +15,14 @@ rm(hy)
 
 load("/mnt/meth/BIGDATA/Smartmeter/smr.RData")
 
+smr <- smr[CUSTOMER_KEY%in%sampKey]
+
 smr[,YEAR:=substr(READING_DATETIME,1,4)]
 smr <- smr[YEAR==2013,.(CUSTOMER_KEY,READING_DATETIME,GENERAL_SUPPLY_KWH)]
 smr[,DAY:=substr(READING_DATETIME,6,10)]
+smr[,HOUR:=substr(READING_DATETIME,12,13)]
+smr[,READING_DATETIME:=NULL]
+save(smr,file="/mnt/meth/BIGDATA/SmartMeter/SmartMeter_transformed_2013_02.RData",compress=TRUE)
 
 load("M:/BIGDATA/SmartMeter/SmartMeter_transformed_2013.RData")
 smr[,GENERAL_SUPPLY_KWH:=KWH_sum]
@@ -77,15 +82,15 @@ vacant1 <- function(kwh,ret="x"){
 
 
 smr1[,nobs:=.N,by=.(CUSTOMER_KEY,DAY)]
-smr1 <- smr1[nobs==24]
-smr1[,out:=vacant(GENERAL_SUPPLY_KWH,.5),by=.(CUSTOMER_KEY,DAY)]
+smr1 <- smr1[nobs==48]
+#smr1[,out:=vacant(GENERAL_SUPPLY_KWH,.5),by=.(CUSTOMER_KEY,DAY)]
 smr1[,outvol:=sd(diff(log(GENERAL_SUPPLY_KWH))),by=.(CUSTOMER_KEY,DAY)]
 smr1[,outts:=vacant1(GENERAL_SUPPLY_KWH,ret="pred"),by=.(CUSTOMER_KEY,DAY)]
 v1 <- smr1[,.(out=vacant(GENERAL_SUPPLY_KWH,.5,ret="out")),by=.(CUSTOMER_KEY,DAY)]
 v2 <- smr1[,.(outts=vacant1(GENERAL_SUPPLY_KWH)),by=.(CUSTOMER_KEY,DAY)]
 v3 <- smr1[,.(outvol=sd(diff(scale(GENERAL_SUPPLY_KWH)))),by=.(CUSTOMER_KEY,DAY)]
 v4 <- smr1[,.(outvar=var(GENERAL_SUPPLY_KWH)),by=.(CUSTOMER_KEY,DAY)]
-smr1[,daytime:=!HOUR%in%c(0:7,20:23)]
+smr1[,daytime:=!as.numeric(HOUR)%in%c(0:7,20:23)]
 v5 <- smr1[,.(outm=mean(GENERAL_SUPPLY_KWH[daytime])/mean(GENERAL_SUPPLY_KWH[!daytime])),by=.(CUSTOMER_KEY,DAY)]
 par(ask=TRUE)
 plotf <- function(x,y,z,m){
