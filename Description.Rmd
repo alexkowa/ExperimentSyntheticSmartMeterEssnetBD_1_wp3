@@ -76,7 +76,7 @@ The method was applied on the total kWh usage per household and day, using a dat
 To improve the performance of the method two additional steps were taken before applying the outlier detection method:
 
 1. The distribution of total kWh usage per day across the households is skewed heavily to the right, as displayed by Figure 5, which shows the density estimates of kWh usage per day. Since this outlier detection method internally applies, onto each column, robust estimates for location and scale, which expect the data to be approximately normal, the Box-Cox transformation, see @box-cox, was initially applied to each column. Because zeros can occur in the data we choose to use the two-parametric Box-Cox transformation, which is implemented in the R-package \texttt{geoR}.
-2. After Box-Cox transformation the data matrix $X$ was split into subsets defined by the number of occupants in each household. The groups were labeled *low*,*mid* and *high* and contained of households with 0-2 occupants, 3-4 occupants, and 5+ occupants.  
+2. After Box-Cox transformation the data matrix $X$ was split into subsets defined by the number of occupants in each household. The groups were labeled *low*,*mid* and *high*, consisting of households with 0-2 occupants, 3-4 occupants, and 5+ occupants.  
 
 ![Density estimates on kwh usage for each day.](kwh_density.pdf)
 
