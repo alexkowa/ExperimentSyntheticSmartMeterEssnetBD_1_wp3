@@ -339,17 +339,20 @@ k <- which(colnames(smr.day)=="01-01")
 ndates <- colnames(smr.day)[k:ncol(smr.day)]
 
 # is kwh-consumption skeewed?
-h <- 15
+h <- 1500
 for(i in 1:ceiling(length(ndates)/h)){
   
-  smr.plot <- smr.day_tf[,c("CUSTOMER_KEY",ndates[((i-1)*h+1):min((i*h),length(ndates))]),with=FALSE]
+  smr.plot <- smr.day[,c("CUSTOMER_KEY",ndates[((i-1)*h+1):min((i*h),length(ndates))]),with=FALSE]
   smr.plot <- melt(smr.plot,id.vars="CUSTOMER_KEY")
-  p1 <- ggplot(smr.plot,aes(value,fill=variable))+
-    geom_density()+
+  # smr.plot[,up.ci:=quantile(value,.975,na.rm=TRUE),by="variable"]
+  # smr.plot[,lo.ci:=quantile(value,.025,na.rm=TRUE),by="variable"]
+  # smr.plot[,med:=mean(value,na.rm=TRUE),by="variable"]
+  p1 <- ggplot(smr.plot,aes(value,group=variable))+
+    geom_density()+xlab("kwh usage")+
     facet_grid(variable~.,scales="free")
   plot(p1)
   
-  plot(p1)
+
   
   readline(prompt="Press [enter] to continue")
 }
@@ -402,13 +405,13 @@ out.plot[,.N,by=list(CUSTOMER_KEY,value)][value==-1&N>200]
 # ziehe zufällig IDs
 # und plote zugehörige Jahres verbräuche
 # um Ergebnisse im Detail zu betrachten
-s <- 20
+s <- 10
 smr.day[,S:=0]
 out.plot[,CAND:=sum(value==-1)>10&sum(value==-1)<100,by=CUSTOMER_KEY]
 sample.hh <- unique(out.plot[,.(CAND,CUSTOMER_KEY)])
 sample.hh[,S:=0]
 key_sample <- c()
-for(i in 1:20){
+for(i in 1:10){
   ID_sample <- sample(sample.hh[S==0&CAND==TRUE]$CUSTOMER_KEY,s)
   key_sample <- c(key_sample,ID_sample)
   sample.hh[CUSTOMER_KEY%in%ID_sample,S:=1]
@@ -426,7 +429,7 @@ for(i in 1:20){
   setkeyv(out.plot_sample,c("CUSTOMER_KEY","variable"))
   
   smr_sample <- out.plot_sample[smr_sample]
-  smr_sample[,CUSTOMER_KEY:=factor(CUSTOMER_KEY,labels=as.character(1:20))]
+  smr_sample[,CUSTOMER_KEY:=factor(CUSTOMER_KEY,labels=as.character(1:10))]
   
   p1 <- ggplot(smr_sample,aes(variable,value))+
     geom_line()+
